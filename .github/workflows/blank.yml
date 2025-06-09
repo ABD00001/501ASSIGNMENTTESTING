@@ -1,4 +1,4 @@
-name: Deploy CloudFormation Stacks
+name: Testngstack0001
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
       - name: List Files
         run: ls -R
         working-directory: ${{ github.workspace }}
-      - name: Deploy CloudFormation Stack
+      - name: Testingstack001 
         run: | 
           aws cloudformation deploy \
           --stack-name inclassstack \
