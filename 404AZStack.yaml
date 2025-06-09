@@ -1,88 +1,219 @@
-AWSTemplateFormatVersion: 2010-09-09
-Description: Test Stack
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  MedEquip Presentation Cloud Infrastructure with MDBDemo and MAppDemo VPCs, VPC Peering,
+  Routing, Security Groups, Bastion Host, and two Web Servers with Apache.
 
 Resources:
-  VPC1:
+
+  ### MDB VPC and Subnets
+  MDBVPCDemo:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 10.0.0.0/16
+      CidrBlock: 10.30.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: VPC1
-  # Subnet for Web Server (Public subnet in VPC1)
-  PublicSubnetVPC1:
+          Value: MDB-VPC-Demo
+
+  MDBPrivateSubnet1Demo:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref VPC1
-      CidrBlock: 10.0.1.0/24
-      MapPublicIpOnLaunch: true
-      AvailabilityZone: !Select
-        - 0
-        - !GetAZs ''
+      VpcId: !Ref MDBVPCDemo
+      CidrBlock: 10.30.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
       Tags:
         - Key: Name
-          Value: Public-Subnet-VPC1
-  # Internet Gateway for VPC1 (for web server)
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-  AttachGateway:
-    Type: AWS::EC2::VPCGatewayAttachment
+          Value: MDB-Private-Subnet-1-Demo
+
+  MDBPrivateSubnet2Demo:
+    Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref VPC1
-      InternetGatewayId: !Ref InternetGateway
-  # Route Table for Public Subnet in VPC1
-  PublicRouteTableVPC1:
+      VpcId: !Ref MDBVPCDemo
+      CidrBlock: 10.30.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: MDB-Private-Subnet-2-Demo
+
+  MDBPrivateRouteTableDemo:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref VPC1
-  PublicRoute:
-    Type: AWS::EC2::Route
-    DependsOn: AttachGateway
-    Properties:
-      RouteTableId: !Ref PublicRouteTableVPC1
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-  # Associate Public Route Table with Public Subnet
-  PublicRouteTableAssociation:
+      VpcId: !Ref MDBVPCDemo
+      Tags:
+        - Key: Name
+          Value: MDB-Private-RouteTable-Demo
+
+  MDBPrivateSubnet1RouteTableAssociationDemo:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnetVPC1
-      RouteTableId: !Ref PublicRouteTableVPC1
-  # Security Group for Web Server in VPC1
-  WebServerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+      SubnetId: !Ref MDBPrivateSubnet1Demo
+      RouteTableId: !Ref MDBPrivateRouteTableDemo
+
+  MDBPrivateSubnet2RouteTableAssociationDemo:
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      GroupDescription: Allow HTTP and SSH
-      VpcId: !Ref VPC1
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-  # EC2 Instance for Web Server in VPC1
-  WebServerInstance:
+      SubnetId: !Ref MDBPrivateSubnet2Demo
+      RouteTableId: !Ref MDBPrivateRouteTableDemo
+
+  ### MApp VPC and Subnets
+  MAppVPCDemo:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.40.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: M-App-VPC-Demo
+
+  MAppPublicSubnet1Demo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MAppVPCDemo
+      CidrBlock: 10.40.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: MApp-Public-Subnet-1-Demo
+
+  MAppPublicSubnet2Demo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MAppVPCDemo
+      CidrBlock: 10.40.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: MApp-Public-Subnet-2-Demo
+
+  MAppInternetGatewayDemo:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: MApp-IGW-Demo
+
+  MAppAttachGatewayDemo:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MAppVPCDemo
+      InternetGatewayId: !Ref MAppInternetGatewayDemo
+
+  MAppPublicRouteTableDemo:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MAppVPCDemo
+      Tags:
+        - Key: Name
+          Value: MApp-Public-RouteTable-Demo
+
+  MAppPublicRouteDemo:
+    Type: AWS::EC2::Route
+    DependsOn: MAppAttachGatewayDemo
+    Properties:
+      RouteTableId: !Ref MAppPublicRouteTableDemo
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref MAppInternetGatewayDemo
+
+  MAppPublicSubnet1RouteTableAssociationDemo:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref MAppPublicSubnet1Demo
+      RouteTableId: !Ref MAppPublicRouteTableDemo
+
+  MAppPublicSubnet2RouteTableAssociationDemo:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref MAppPublicSubnet2Demo
+      RouteTableId: !Ref MAppPublicRouteTableDemo
+
+  ### VPC Peering
+  VPCPeeringConnectionDemo:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      VpcId: !Ref MDBVPCDemo
+      PeerVpcId: !Ref MAppVPCDemo
+      Tags:
+        - Key: Name
+          Value: MDB-MApp-Peering-Demo
+
+  MDBToMAppPeeringRouteDemo:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref MDBPrivateRouteTableDemo
+      DestinationCidrBlock: 10.40.0.0/16
+      VpcPeeringConnectionId: !Ref VPCPeeringConnectionDemo
+
+  MAppPublicToMDBPeeringRouteDemo:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref MAppPublicRouteTableDemo
+      DestinationCidrBlock: 10.30.0.0/16
+      VpcPeeringConnectionId: !Ref VPCPeeringConnectionDemo
+
+  ### Bastion Host
+  BastionHostDemo:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t3.small
-      ImageId: ami-0a5c3558529277641
-      SubnetId: !Ref PublicSubnetVPC1
-      SecurityGroupIds:
-        - !Ref WebServerSecurityGroup
+      InstanceType: t3.micro
       KeyName: vockey
-      UserData: !Base64 |
-        #!/bin/bash
-        yum update -y
-        yum install -y httpd php php-mysql
-        systemctl start httpd
-        systemctl enable httpd
-        echo "<?php phpinfo(); ?>" > /var/www/html/index.php
+      SubnetId: !Ref MAppPublicSubnet1Demo
+      ImageId: ami-0c02fb55956c7d316
+      Tags:
+        - Key: Name
+          Value: BastionHost-Demo
+
+  ### Web Servers
+  WebServer1Demo:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      KeyName: vockey
+      SubnetId: !Ref MAppPublicSubnet1Demo
+      ImageId: ami-0c02fb55956c7d316
+      Tags:
+        - Key: Name
+          Value: WebServer1-Demo
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "Welcome to WebServer1-Demo in AZ1!" > /var/www/html/index.html
+
+  WebServer2Demo:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      KeyName: vockey
+      SubnetId: !Ref MAppPublicSubnet2Demo
+      ImageId: ami-0c02fb55956c7d316
+      Tags:
+        - Key: Name
+          Value: WebServer2-Demo
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "Welcome to WebServer2-Demo in AZ2!" > /var/www/html/index.html
+
 Outputs:
-  WebServerPublicIP:
-    Description: Public IP address of the web server instance
-    Value: !GetAtt WebServerInstance.PublicIp
+  WebServer1DemoPublicIP:
+    Description: Public IP of Web Server 1 (Demo)
+    Value: !GetAtt WebServer1Demo.PublicIp
+
+  WebServer2DemoPublicIP:
+    Description: Public IP of Web Server 2 (Demo)
+    Value: !GetAtt WebServer2Demo.PublicIp
+
+  BastionHostDemoPublicIP:
+    Description: Public IP of the Bastion Host (Demo)
+    Value: !GetAtt BastionHostDemo.PublicIp
